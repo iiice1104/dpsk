@@ -36,6 +36,10 @@ RoPE的外推性具有局限性，YaRN在RoPE的基础上采用多阶段插值�
 3.将所有头的输出拼接起来，拼接输出=[head1,head2,...headh],然后使用线性变换Wo将其融合，最终输出=拼接输出·Wo,映射到原始维度  
 
 接下来介绍MLA:MHA需要为每个注意力头缓存完整的KV矩阵，显存占用随着头数线性增长，MLA通过低秩联合压缩技术，将KV矩阵压缩为潜在向量，显著降低空间占用  
-1.对于输入h，使用降维矩阵Wᴰᴷⱽ<sup>h</sup>
+1.下投影：对于输入h，使用共享的降维矩阵W<sup>dkv</sup>，将原始高维特征映射到低维潜在空间，得C<sup>KV</sup>=W<sup>DKV</sup>h,同理C<sup>Q</sup>=W<sup>DKV</sup>h，缓存的是降维结果  
+2.向上投影：后续推理使用时，需要将潜在向量升维，使用头特定的升维矩阵W<sup>kk</sup>、W<sup>vv</sup>等，例如计算分数矩阵时，Q·K^T=Q·(W<sup>kk</sup>C<sup>KV</sup>)^T  
+3.与RoPE兼容：  
+RoPE不是应用于上投影得到的q<sup>C</sup>，而是直接从C<sup>Q</sup>生成新的Q嵌入q<sup>R</sup>:q<sup>R</sup>=RoPE(W<sup>QR</sup>C<sup>Q</sup>)  
+对于新的k嵌入，也不是应用于上投影后的K，与q不同，也不是下投影的K(C<sup>K</sup>)，而是由输入h生成：k<sup>R</sup>=RoPE(W<sup>KR</sup>h) 
 
 
