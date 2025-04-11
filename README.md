@@ -78,8 +78,8 @@ deepseek的MoE层的架构相比传统的MoE有两个特点：细粒度专家分
 2.共享专家隔离：固定保留部分专家作为共享专家，始终被激活，用于捕捉跨任务的通用知识，如语法、基础逻辑等，其余专家专注于领域特异性知识。  
 
 如何计算激活哪几个专家？  
-每个专家有一个质心向量e<sup>i</sup>,计算MoE的输入u<sup>t</sup>与每个e<sup>i</sup>之间的相似度：s<sup>i,t</sup> = Sigmoid(u<sup>t</sup><sub>T</sub>e<sup>i</sup>)，这个值决定每个专家与给定输入的相关程度，仅激活具有最高s<sup>i,t</sup>的Top-K专家进行处理，其余专家输出置0。  
-最终的输出h<sup>t</sup>包含三部分：输入u<sup>t</sup>，共享专家的输出，被激活的Top-K专家的输出（需处理）。
+每个专家有一个质心向量e<sub>i</sub>,计算MoE的输入u<sub>t</sub>与每个e<sub>i</sub>之间的相似度：s<sub>i,t</sub> = Sigmoid(u<sub>t</sub><sup>T</sup>e<sub>i</sub>)，这个值决定每个专家与给定输入的相关程度，仅激活具有最高s<sub>i,t</sub>的Top-K专家进行处理，其余专家输出置0。  
+最终的输出h<sub>t</sub>包含三部分：输入u<sub>t</sub>，共享专家的输出，被激活的Top-K专家的输出（需处理）。
 
 
 
