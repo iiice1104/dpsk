@@ -6,7 +6,7 @@ RoPE(Rotary Position Embedding)：旋转位置编码
 
 外推性：模型对超出训练范围的数据的泛化性能，对于RoPE指的是处理比训练时更长的序列时的有效性
 
-核心问题：比训练时更长的序列意味着模型需要处理未见过的位置索引
+核心问题：比训练时更长的序列意味着模型需要处理未见过的位置索引  
 位置编码的重要性：模型通过位置编码来理解token的顺序关系，若外推性不足，模型难以捕捉长距离位置依赖或相对位置关系
 
 如果外推性较差：则模型处理长文本生成任务时可能出现语段重复、逻辑混乱的情况
@@ -19,7 +19,7 @@ RoPE的外推性具有局限性，YaRN在RoPE的基础上采用多阶段插值�
 优化措施中的一些概念：  
 高频维度：RoPE中旋转角度较大，旋转速度较快的维度，一般是隐藏层的低维部分，索引较小，擅长捕捉局部细节和近距离依赖关系  
 低频维度：相应地，旋转角度较小，旋转较慢，维度索引较大，捕捉长距离依赖和全局结构  
-波长：设旋转角度为θi，则旋转一周是2Π，波长λ是在维度i上旋转一周（2Π）需要的序列长度。例如当λ=100，则每100个token后改维度的位置编码会循环一次  
+波长：设旋转角度为θi，则旋转一周是2Π，波长λ是在维度i上旋转一周（2Π）需要的序列长度。例如当λ=100，则每100个token后该维度的位置编码会循环一次  
 短波长（高频维度）：旋转角度大，波长短，适合编码局部位置  
 长波长（低频维度）：旋转角度小，波长长，适合编码全局位置  
 
@@ -38,11 +38,13 @@ RoPE的外推性具有局限性，YaRN在RoPE的基础上采用多阶段插值�
 ● 由于MHA的KV缓存太大，有提出多查询注意力机制MQA，分组查询注意力机制GQA，都是多个查询对应一个KV，虽然KV缓存减小了，但是性能也降低了  
 
 接下来介绍MLA:MHA需要为每个注意力头缓存完整的KV矩阵，显存占用随着头数线性增长，MLA通过低秩联合压缩技术，将KV矩阵压缩为潜在向量，显著降低空间占用  
-1.下投影：对于输入h，使用共享的降维矩阵W<sup>dkv</sup>，将原始高维特征映射到低维潜在空间，得C<sup>KV</sup>=W<sup>DKV</sup>h,同理C<sup>Q</sup>=W<sup>DKV</sup>h，缓存的是降维结果  
+![image](https://github.com/user-attachments/assets/a37710fe-826a-426c-80df-e44016cbe394)
+
+1.下投影：对于输入h<sub>t</sub>，使用共享的降维矩阵W<sup>DKV</sup>，将原始高维特征映射到低维潜在空间，得C<sup>KV</sup>=W<sup>DKV</sup>h<sub>t</sub>,同理C<sup>Q</sup>=W<sup>DKV</sup>h<sub>t</sub>，缓存的是降维结果  
 2.向上投影：后续推理使用时，需要将潜在向量升维，使用头特定的升维矩阵W<sup>kk</sup>、W<sup>vv</sup>等，k<sup>C</sup>=W<sup>kk</sup>C<sup>KV</sup>，例如计算分数矩阵时，Q·K^T=Q·(W<sup>kk</sup>C<sup>KV</sup>)^T  
 3.与RoPE兼容：  
 RoPE不是应用于上投影得到的q<sup>C</sup>，而是直接从C<sup>Q</sup>生成新的Q嵌入:q<sup>R</sup>=RoPE(W<sup>QR</sup>C<sup>Q</sup>)  
-对于新的k嵌入，也不是应用于上投影后的K，与q不同，也不是下投影的K(C<sup>K</sup>)，而是由输入h生成：k<sup>R</sup>=RoPE(W<sup>KR</sup>h)  
+对于新的k嵌入，不是应用于上投影后的K，与q不同的是，也不是下投影的K(C<sup>K</sup>)，而是由输入h<sub>t</sub>生成：k<sup>R</sup>=RoPE(W<sup>KR</sup>h<sub>t</sub>)  
 4.计算注意力输出：q为{q<sup>C</sup>,q<sup>R</sup>}，k为{k<sup>C</sup>,k<sup>R</sup>}，v为{v<sup>C</sup>}，连接时Q和K的维数增加了，模型可以增加注意力头的数量或者调整每个头的维数来适应这个增加  
 注意力的输出如下：  
 ![image](https://github.com/user-attachments/assets/6d3bf83a-5b7f-4be7-95a4-0000cdea9420)
@@ -73,6 +75,7 @@ ReLU的作用：1.在正区间的梯度恒为1，避免传统激活函数导致�
 
 接下来学习MoE：  
 每个MoE层有多个专家（Expert）组成，每个专家在结构上保持类似FFN的结构（两层FC以及中间的ReLU层），但通过动态路由机制选择性地激活部分专家。  
+![image](https://github.com/user-attachments/assets/3797dfbe-db9d-40a0-bdfd-c47b6f99bc3d)
 
 deepseek的MoE层的架构相比传统的MoE有两个特点：细粒度专家分割与共享隔离。  
 1.细粒度专家分割：将专家进一步拆分成更小的子专家，每次激活一定数量的子专家，避免单一专家被迫学习混杂知识；  
