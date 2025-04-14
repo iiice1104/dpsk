@@ -45,7 +45,8 @@ RoPE不是应用于上投影得到的q<sup>C</sup>，而是直接从C<sup>Q</sup
 对于新的k嵌入，也不是应用于上投影后的K，与q不同，也不是下投影的K(C<sup>K</sup>)，而是由输入h生成：k<sup>R</sup>=RoPE(W<sup>KR</sup>h)  
 4.计算注意力输出：q为{q<sup>C</sup>,q<sup>R</sup>}，k为{k<sup>C</sup>,k<sup>R</sup>}，v为{v<sup>C</sup>}，连接时Q和K的维数增加了，模型可以增加注意力头的数量或者调整每个头的维数来适应这个增加  
 注意力的输出如下：  
-![image](https://github.com/user-attachments/assets/aec69435-c56b-408c-88bb-d9910c676a15)
+![image](https://github.com/user-attachments/assets/6d3bf83a-5b7f-4be7-95a4-0000cdea9420)
+
 
 # 3.混合专家MOE
 
@@ -79,7 +80,18 @@ deepseek的MoE层的架构相比传统的MoE有两个特点：细粒度专家分
 
 如何计算激活哪几个专家？  
 每个专家有一个质心向量e<sub>i</sub>,计算MoE的输入u<sub>t</sub>与每个e<sub>i</sub>之间的相似度：s<sub>i,t</sub> = Sigmoid(u<sub>t</sub><sup>T</sup>e<sub>i</sub>)，这个值决定每个专家与给定输入的相关程度，仅激活具有最高s<sub>i,t</sub>的Top-K专家进行处理，其余专家输出置0。  
-最终的输出h<sub>t</sub>包含三部分：输入u<sub>t</sub>，共享专家的输出，被激活的Top-K专家的输出（需处理）。
+最终的输出h<sub>t</sub>包含三部分：输入u<sub>t</sub>，共享专家的输出，被激活的Top-K专家的输出（需处理）。  
+
+# 4.多标记预测 MTP  
+
+多标记预测是语言建模中的一种高级方法，不是一次预测一个序列中的下一个单词，而是同时预测多个未来标记，使模型能并行预测多个即将到来的单词，从而提高学习效率并加速生成文本。  
+![image](https://github.com/user-attachments/assets/d252748d-0797-4e28-bf29-ffbca8e61763)  
+接下来根据以上这张MTP应用过程的图解介绍MTP的具体应用流程：  
+1.训练期间，（左下角）输入标记t<sub>1</sub>至t<sub>4</sub>经过嵌入层输入到Transformer处理层，从第一个输出头（预测头）输出，预测了下一个标记t<sub>5</sub>  
+2.从主模型的transformer层获取输出即t<sub>2</sub>至t<sub>5</sub>然后经过RMSNorm进行归一化，同时输入标记t<sub>2</sub>至t<sub>5</sub>，输入标记和主模型经过一样的嵌入层处理后归一化，然后和前面获得的输出拼接，经过线性投影层，输入到transformer块，预测得到t<sub>6</sub>  
+3.循环往复，得到多个预测。每个预测头需要计算交叉熵损失，使用λ加权然后取平均值作为最终的损失值。  
+4.在deepseek-V3和R1中，MTP仅在训练期间使用，不在推理阶段使用。
+
 
 
 
